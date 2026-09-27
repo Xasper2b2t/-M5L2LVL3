@@ -63,18 +63,17 @@ class DB_Map():
 
 
 
-    def create_graph(self, path, cities):
+    def create_graph(self, path, cities, point_color='red'):
         fig = plt.figure(figsize=(12, 6))
         ax = plt.axes(projection=ccrs.Orthographic())
         
-  
         ax.stock_img()
-        
         ax.coastlines(resolution='110m', color="black", linewidth=1)
         ax.add_feature(cfeature.BORDERS, linestyle=':')
-        ax.add_feature(cfeature.LAND, edgecolor='black')
-        ax.add_feature(cfeature.OCEAN)
-
+  
+        ax.add_feature(cfeature.LAND, facecolor='#e8d7b5') 
+        ax.add_feature(cfeature.OCEAN, facecolor='#a0c9f0') 
+        
         for city in cities:
             coordinates = self.get_coordinates(city)
             if coordinates is None:
@@ -82,11 +81,14 @@ class DB_Map():
             
             lat, lng = coordinates
             
-       
-            ax.plot(lng, lat, marker='o', color='red', markersize=8, transform=ccrs.PlateCarree())
+        
+            ax.plot(lng, lat, marker='o', color=point_color, markersize=10, transform=ccrs.PlateCarree(), alpha=0.9)
             
          
-            ax.text(lng + 5, lat + 5, city, fontsize=9, color='black', fontweight='bold', transform=ccrs.PlateCarree())
+            text_color = 'black' if point_color not in ['black', 'navy'] else 'white'
+            ax.text(lng + 5, lat + 5, city, fontsize=10, fontweight='bold', color=text_color, 
+                    bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=point_color, lw=1, alpha=0.8),
+                    transform=ccrs.PlateCarree())
 
         fig.savefig(path, dpi=150, bbox_inches='tight')
         plt.close(fig)
