@@ -4,13 +4,13 @@ from config import *
 from logic import *
 
 bot = telebot.TeleBot(TOKEN)
-manager = None  # Инициализируем глобально, чтобы использовать в функциях
+manager = None   
 
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     user_id = message.chat.id
-    manager.create_user_table()  # Убедимся, что таблица создана при первом запуске
+    manager.create_user_table() 
     bot.send_message(user_id, "Привет! Я бот, который может показывать города на карте. Напиши /help для списка команд.")
 
 
@@ -29,25 +29,52 @@ def handle_help(message):
 
 @bot.message_handler(commands=['show_city'])
 def handle_show_city(message):
-    try:
-        city_name = message.text.split(maxsplit=1)[1].title()
-    except IndexError:
-        bot.send_message(message.chat.id, 'Укажите название города после команды. Пример: /show_city London')
+    parts = message.text.split()
+    if len(parts) < 2:
+        bot.send_message(message.chat.id, 'Укажите название города. Пример: /show_city London')
         return
+
+    city_name = parts[1].title()
+    
+   
+    marker_color = 'red'
+    if len(parts) == 3:
+        marker_color = parts[2]
 
     coordinates = manager.get_coordinates(city_name)
     if not coordinates:
-        bot.send_message(message.chat.id, 'Такого города я не знаю. Убедись, что он написан на английском!')
+        bot.send_message(message.chat.id, 'Такого города я не знаю.')
         return
 
     temp_file = f"temp_{message.chat.id}_{city_name}.png"
-    manager.create_graph(temp_file, [city_name])
+   
+    manager.create_graph(temp_file, [city_name], point_color=marker_color)
     
     with open(temp_file, 'rb') as photo:
-        bot.send_photo(message.chat.id, photo, caption=f'Вот где находится {city_name}')
+        bot.send_photo(message.chat.id, photo, caption=f'Вот где находится {city_name} 📍')
     
     os.remove(temp_file)
 
+@bot.message_handler(commands=['show_my_cities'])
+def handle_show_visited_cities(message):
+    user_id = message.chat.id
+    cities = manager.select_cities(user_id)
+
+    if not cities:
+        bot.send_message(user_id, 'Ваш список городов пуст.')
+        return
+
+    temp_file = f"user_map_{user_id}.png"
+
+    manager.create_graph(temp_file, cities, point_color='darkviolet') 
+
+    city_list = "\n".join([f"- {city}" for city in cities])
+    caption = f"Ваши сохраненные города:\n{city_list}"
+
+    with open(temp_file, 'rb') as photo:
+        bot.send_photo(user_id, photo, caption=caption)
+    
+    os.remove(temp_file)
 
 @bot.message_handler(commands=['remember_city'])
 def handle_remember_city(message):
